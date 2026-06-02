@@ -1,0 +1,123 @@
+{% extends 'base.html' %} {% block title %}Admin Dashboard · AI-Powered Autocorrect Tool{% endblock %} {% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+{% endblock %} {% block content %}
+<div class="panel-card p-4 p-lg-5 mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center">
+        <div>
+            <span class="eyebrow">Administration</span>
+            <h1 class="h3 mb-0 mt-2">Analytics dashboard</h1>
+            <p class="text-secondary mb-0 mt-2">Monitor usage, language distribution, model performance, and recent correction activity.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <span class="feature-pill">Total corrections: {{ dashboard.totals.total_corrections }}</span>
+            <span class="feature-pill">Admins: {{ dashboard.totals.admin_users }}</span>
+            <span class="feature-pill">Top language: {{ dashboard.top_performing_language }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card"><span>Avg confidence</span><strong>{{ dashboard.totals.avg_confidence }}%</strong></div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card"><span>Avg readability</span><strong>{{ dashboard.totals.avg_readability }}</strong></div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card"><span>Users</span><strong>{{ dashboard.totals.total_users }}</strong></div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card"><span>Recent confidence</span><strong>{{ dashboard.average_recent_confidence }}%</strong></div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="panel-card p-4 h-100">
+            <h2 class="h5 mb-3">Activity trend</h2>
+            <canvas id="activityChart" height="150"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="panel-card p-4 h-100">
+            <h2 class="h5 mb-3">Language distribution</h2>
+            <canvas id="languageChart" height="220"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="panel-card p-4 h-100">
+            <h2 class="h5 mb-3">Model usage</h2>
+            <canvas id="modeChart" height="220"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="panel-card p-4 h-100">
+            <h2 class="h5 mb-3">Registered users</h2>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle history-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.full_name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td><span class="badge text-bg-{{ 'warning' if user.role == 'admin' else 'secondary' }}">{{ user.role }}</span></td>
+                            <td>{{ user.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel-card p-4">
+    <h2 class="h5 mb-3">Recent corrections</h2>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle history-table mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Original</th>
+                    <th>Corrected</th>
+                    <th>Confidence</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in dashboard.recent_corrections %}
+                <tr>
+                    <td>#{{ record.id }}</td>
+                    <td>{{ record.user_full_name or 'Anonymous' }}</td>
+                    <td class="truncate-cell">{{ record.original_text }}</td>
+                    <td class="truncate-cell">{{ record.corrected_text }}</td>
+                    <td>{{ record.confidence_score }}%</td>
+                    <td>{{ record.created_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %} {% block scripts %}
+<script>
+    window.__DASHBOARD__ = {
+        {
+            dashboard | tojson
+        }
+    };
+</script>
+{% endblock %}

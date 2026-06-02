@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}AI-Powered Autocorrect Tool{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> {% block head %}{% endblock %}
+</head>
+
+<body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+    <nav class="navbar navbar-expand-lg navbar-dark py-3 glass-nav">
+        <div class="container">
+            <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+                <span class="brand-mark">AI</span>
+                <span>Autocorrect Studio</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNav" aria-controls="topNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="topNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Workspace</a></li>
+                    {% if is_authenticated %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('history') }}">History</a></li>
+                    {% endif %} {% if is_admin %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin</a></li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <button id="themeToggle" class="btn btn-outline-light btn-sm ms-lg-2" type="button">
+                            <i class="bi bi-moon-stars"></i> Theme
+                        </button>
+                    </li>
+                    {% if is_authenticated %}
+                    <li class="nav-item ms-lg-2">
+                        <div class="nav-account">
+                            <span class="nav-account-avatar">{{ current_user.full_name[:1]|upper }}</span>
+                            <div>
+                                <div class="nav-account-name">{{ current_user.full_name }}</div>
+                                <div class="nav-account-role">{{ current_user.role|title }}</div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="nav-item"><a class="btn btn-outline-light btn-sm ms-lg-2" href="{{ url_for('logout') }}">Logout</a></li>
+                    {% else %}
+                    <li class="nav-item"><a class="btn btn-outline-light btn-sm ms-lg-2" href="{{ url_for('login') }}">Login</a></li>
+                    <li class="nav-item"><a class="btn btn-primary btn-sm ms-lg-2" href="{{ url_for('register') }}">Create account</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="py-4 py-lg-5">
+        <div class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
+            <div class="mb-4">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} shadow-sm" role="alert">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %} {% endwith %} {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="py-4 mt-4 footer-note">
+        <div class="container d-flex flex-column flex-md-row justify-content-between gap-2 small text-secondary">
+            <span>Built with Flask, Hugging Face Transformers, Bootstrap 5, and SQLite.</span>
+            <span>AI-Powered Autocorrect Tool</span>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

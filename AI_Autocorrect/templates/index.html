@@ -1,0 +1,157 @@
+{% extends 'base.html' %} {% block title %}AI-Powered Autocorrect Tool{% endblock %} {% block content %}
+<div class="hero-card p-4 p-lg-5 mb-4">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-8">
+            <span class="eyebrow">Transformer grammar correction · real-time typing suggestions · confidence analytics</span>
+            <h1 class="display-5 fw-bold mt-3 mb-3">Autocorrect text with a premium AI workspace.</h1>
+            <p class="lead text-secondary mb-4">A portfolio-grade SaaS-style editor for spelling, grammar, readability, and context-aware correction with history, exports, and admin analytics.</p>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="feature-pill"><i class="bi bi-diagram-3"></i> Context-aware transformer</span>
+                <span class="feature-pill"><i class="bi bi-lightning-charge"></i> Real-time suggestions</span>
+                <span class="feature-pill"><i class="bi bi-graph-up-arrow"></i> Analytics dashboard</span>
+                <span class="feature-pill"><i class="bi bi-shield-lock"></i> Authenticated history</span>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="status-stack">
+                <div class="status-pill"><i class="bi bi-shield-check"></i> {{ dashboard_totals.total_corrections }} corrections processed</div>
+                <div class="status-pill"><i class="bi bi-person-badge"></i> {{ dashboard_totals.total_users }} registered users</div>
+                <div class="status-pill"><i class="bi bi-file-earmark-arrow-down"></i> TXT and PDF exports</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="panel-card p-4 h-100">
+            <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
+                <div>
+                    <h2 class="h4 mb-1">Correction Workspace</h2>
+                    <p class="text-secondary mb-0">Live suggestions refresh while you type. Sign in to save history and exports.</p>
+                </div>
+                <div class="language-wrap">
+                    <label class="form-label small text-uppercase text-secondary mb-1" for="languageSelect">Language</label>
+                    <select id="languageSelect" class="form-select form-select-sm">
+                        {% for language in languages %}
+                        <option value="{{ language.code }}">{{ language.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold" for="inputText">Your text</label>
+                <textarea id="inputText" class="form-control editor-box" rows="12" placeholder="Type or paste the paragraph you want corrected..."></textarea>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                <button id="correctBtn" class="btn btn-primary btn-lg"><i class="bi bi-magic"></i> Correct Text</button>
+                <button id="voiceBtn" class="btn btn-outline-info btn-lg"><i class="bi bi-mic-fill"></i> Voice Input</button>
+                <button id="clearBtn" class="btn btn-outline-secondary btn-lg"><i class="bi bi-eraser"></i> Clear</button>
+                <button id="previewBtn" class="btn btn-outline-light btn-lg"><i class="bi bi-lightning-charge"></i> Refresh Suggestions</button>
+            </div>
+
+            <div class="row g-3 stats-grid mb-4">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stat-card"><span>Total Words</span><strong id="statWords">0</strong></div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stat-card"><span>Incorrect Words</span><strong id="statIncorrect">0</strong></div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stat-card"><span>Corrections</span><strong id="statCorrections">0</strong></div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stat-card"><span>Accuracy</span><strong id="statAccuracy">100%</strong></div>
+                </div>
+            </div>
+
+            <div id="messageBox" class="alert alert-info d-none"></div>
+
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="analysis-head">Original Text</div>
+                    <div id="originalPreview" class="analysis-body muted-html">Your raw text will appear here.</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-head">Corrected Text</div>
+                    <div id="correctedPreview" class="analysis-body muted-html">Your improved text will appear here.</div>
+                </div>
+            </div>
+
+            <div class="analysis-card mt-4">
+                <div class="analysis-head">Before / After Comparison</div>
+                <div id="diffPreview" class="analysis-body muted-html">Corrections will be highlighted here.</div>
+            </div>
+
+            <div class="row g-3 mt-4">
+                <div class="col-lg-6">
+                    <div class="analysis-card h-100">
+                        <div class="analysis-head">AI Suggestions</div>
+                        <div id="suggestionsPreview" class="analysis-body"></div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="analysis-card h-100">
+                        <div class="analysis-head">AI Explanation</div>
+                        <div id="explanationsPreview" class="analysis-body"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="panel-card p-4 mb-4">
+            <h2 class="h5 mb-3">AI Insights</h2>
+            <div class="insight-item"><span>Confidence</span><strong id="confidenceScore">0%</strong></div>
+            <div class="insight-item"><span>Readability</span><strong id="readabilityScore">0</strong></div>
+            <div class="insight-item"><span>Sentiment</span><strong id="sentimentScore">Neutral</strong></div>
+            <div class="insight-item"><span>Keywords</span><strong id="keywordsScore">-</strong></div>
+        </div>
+
+        <div class="panel-card p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Saved History</h2>
+                {% if is_authenticated %}
+                <a href="{{ url_for('history') }}" class="small text-decoration-none">View all</a> {% else %}
+                <a href="{{ url_for('login') }}" class="small text-decoration-none">Sign in</a> {% endif %}
+            </div>
+            <div class="history-list">
+                {% for item in recent_history %}
+                <div class="history-chip">
+                    <div class="history-chip-title">{{ item.original_text[:72] }}{% if item.original_text|length > 72 %}...{% endif %}</div>
+                    <div class="history-chip-meta">{{ item.created_at }} · {{ item.language|upper }} · {{ item.analysis_mode }}</div>
+                </div>
+                {% else %}
+                <p class="text-secondary mb-0">Sign in to save corrections and revisit previous work in the history center.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="panel-card p-4">
+            <h2 class="h5 mb-3">Platform Metrics</h2>
+            <div class="metric-list">
+                <div class="metric-row"><span>Processed</span><strong>{{ dashboard_totals.total_corrections }}</strong></div>
+                <div class="metric-row"><span>Accuracy</span><strong>{{ dashboard_totals.avg_confidence|round(1) }}%</strong></div>
+                <div class="metric-row"><span>Users</span><strong>{{ dashboard_totals.total_users }}</strong></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not is_authenticated %}
+<div class="panel-card p-4 p-lg-5 mt-4 auth-cta">
+    <div class="row align-items-center g-3">
+        <div class="col-lg-8">
+            <h2 class="h4 mb-2">Create an account to unlock persistent history and exports.</h2>
+            <p class="text-secondary mb-0">The workspace works instantly, but login enables saved corrections, the admin dashboard, and full record export.</p>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+            <a class="btn btn-primary btn-lg me-2" href="{{ url_for('register') }}">Create account</a>
+            <a class="btn btn-outline-light btn-lg" href="{{ url_for('login') }}">Sign in</a>
+        </div>
+    </div>
+</div>
+{% endif %} {% endblock %}

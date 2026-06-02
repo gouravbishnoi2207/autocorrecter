@@ -1,0 +1,31 @@
+{% extends 'base.html' %} {% block title %}Create Account · AI-Powered Autocorrect Tool{% endblock %} {% block content %}
+<div class="auth-shell">
+    <div class="auth-card panel-card p-4 p-lg-5">
+        <span class="eyebrow">Join the workspace</span>
+        <h1 class="h3 mt-3 mb-2">Create your account</h1>
+        <p class="text-secondary mb-4">Use a secure account to store corrections, revisit history, and unlock the admin dashboard for reviewers.</p>
+        <form method="post" class="auth-form">
+            <div class="mb-3">
+                <label class="form-label" for="full_name">Full name</label>
+                <input type="text" class="form-control" id="full_name" name="full_name" placeholder="Your name" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="At least 8 characters" required>
+            </div>
+            <div class="mb-4">
+                <label class="form-label" for="confirm_password">Confirm password</label>
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Repeat your password" required>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">Create account</button>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg">I already have an account</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

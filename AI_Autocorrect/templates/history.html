@@ -1,0 +1,116 @@
+{% extends 'base.html' %} {% block title %}Correction History · AI-Powered Autocorrect Tool{% endblock %} {% block content %}
+<div class="panel-card p-4 p-lg-5 mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center">
+        <div>
+            <span class="eyebrow">Saved corrections</span>
+            <h1 class="h3 mb-0 mt-2">History center</h1>
+            <p class="text-secondary mb-0 mt-2">Search prior work, inspect AI explanations, and export polished versions.</p>
+        </div>
+        <form class="history-search" method="get" action="{{ url_for('history') }}">
+            <input type="search" name="q" value="{{ query }}" class="form-control" placeholder="Search original or corrected text">
+            <button class="btn btn-primary" type="submit">Search</button>
+        </form>
+    </div>
+</div>
+
+<div class="panel-card p-4 mb-4">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="stat-card"><span>Corrections</span><strong>{{ corrections|length }}</strong></div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card"><span>Language mix</span><strong>{{ corrections[0].language|upper if corrections else 'N/A' }}</strong></div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card"><span>Latest update</span><strong>{{ corrections[0].created_at if corrections else '—' }}</strong></div>
+        </div>
+    </div>
+</div>
+
+<div class="panel-card p-4">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle history-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Original</th>
+                    <th>Corrected</th>
+                    <th>Mode</th>
+                    <th>Language</th>
+                    <th>Confidence</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in corrections %}
+                <tr>
+                    <td>#{{ item.id }}</td>
+                    <td class="truncate-cell">{{ item.original_text }}</td>
+                    <td class="truncate-cell">{{ item.corrected_text }}</td>
+                    <td><span class="badge text-bg-info">{{ item.analysis_mode }}</span></td>
+                    <td>{{ item.language|upper }}</td>
+                    <td>{{ item.stats.confidence_score if item.stats else item.confidence_score }}%</td>
+                    <td>{{ item.created_at }}</td>
+                    <td>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a class="btn btn-outline-light btn-sm" href="{{ url_for('export_txt', correction_id=item.id) }}">TXT</a>
+                            <a class="btn btn-outline-info btn-sm" href="{{ url_for('export_pdf', correction_id=item.id) }}">PDF</a>
+                            <button class="btn btn-outline-secondary btn-sm view-detail-btn" type="button" data-history-id="{{ item.id }}">View</button>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-secondary">No correction history found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content modal-card">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Correction details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detailLoading" class="text-secondary">Select a record to inspect the full explanation.</div>
+                <div id="detailContent" class="d-none">
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <div class="analysis-card h-100">
+                                <div class="analysis-head">Original</div>
+                                <div id="detailOriginal" class="analysis-body muted-html"></div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="analysis-card h-100">
+                                <div class="analysis-head">Corrected</div>
+                                <div id="detailCorrected" class="analysis-body muted-html"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-lg-6">
+                            <div class="analysis-card h-100">
+                                <div class="analysis-head">Statistics</div>
+                                <pre id="detailStats" class="json-block mb-0"></pre>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="analysis-card h-100">
+                                <div class="analysis-head">AI Explanations</div>
+                                <pre id="detailExplanations" class="json-block mb-0"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

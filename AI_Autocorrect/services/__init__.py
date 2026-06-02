@@ -1,0 +1,1 @@
+"""Service layer for AI correction, analytics, and model integration."""

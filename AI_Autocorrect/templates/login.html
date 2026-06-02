@@ -1,0 +1,23 @@
+{% extends 'base.html' %} {% block title %}Sign In · AI-Powered Autocorrect Tool{% endblock %} {% block content %}
+<div class="auth-shell">
+    <div class="auth-card panel-card p-4 p-lg-5">
+        <span class="eyebrow">Workspace access</span>
+        <h1 class="h3 mt-3 mb-2">Sign in</h1>
+        <p class="text-secondary mb-4">Access your saved corrections, export history, and the admin analytics dashboard.</p>
+        <form method="post" class="auth-form">
+            <div class="mb-3">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">Sign in</button>
+                <a href="{{ url_for('register') }}" class="btn btn-outline-light btn-lg">Create an account</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
