@@ -497,4 +497,8 @@ def health() -> Any:
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
+<<<<<<< HEAD
     app.run(host="0.0.0.0", port=port)
+=======
+    app.run(host="0.0.0.0", port=port)
+>>>>>>> 6ee1d41565fcbf004c1a4932b3898cd4b1cb5ab0
