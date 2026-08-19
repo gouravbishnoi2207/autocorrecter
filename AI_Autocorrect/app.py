@@ -26,8 +26,8 @@ from utils.database import (
     save_correction,
     save_user,
 )
-from utils.grammar import analyze_sentiment, calculate_readability, correct_grammar, extract_keywords
-from utils.spellchecker import analyze_spelling, normalize_language
+from utils.grammar import analyze_sentiment, calculate_readability, extract_keywords
+from utils.spellchecker import normalize_language
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -106,25 +106,24 @@ def process_text(text: str, language: str = "en", context_before: str = "") -> D
         context_before=context_before,
         language=normalized_language,
     )
-    transformed_text = transformer_result.corrected_text
+    final_text = transformer_result.corrected_text
 
-    spelling_result = analyze_spelling(transformed_text, normalized_language)
-    grammar_result = correct_grammar(spelling_result["corrected_text"], normalized_language)
-    final_text = grammar_result["corrected_text"]
-
-    transformer_issue = None
-    if transformer_result.used_transformer and transformed_text != cleaned_text:
-        transformer_issue = {
-            "type": "transformer",
-            "original": cleaned_text,
-            "corrected": transformed_text,
-            "reason": "A context-aware transformer model identified a cleaner grammatical rewrite.",
-            "better_choice": "The transformer output keeps the sentence meaning intact while improving fluency.",
-            "suggestions": [transformed_text],
+    # Build correction entries straight from Claude's reported changes —
+    # no separate spellchecker/grammar pass, so valid technical terms
+    # (SaaS, admin, analytics, etc.) never get "corrected" a second time.
+    corrections = [
+        {
+            "type": "ai_correction",
+            "original": change.get("original"),
+            "corrected": change.get("corrected"),
+            "reason": change.get("reason", "Corrected by AI for spelling/grammar/clarity."),
+            "better_choice": change.get("reason", ""),
+            "suggestions": [change.get("corrected")],
             "confidence": transformer_result.confidence_score / 100,
         }
+        for change in transformer_result.changes
+    ]
 
-    corrections = [item for item in [transformer_issue] if item] + spelling_result["issues"] + grammar_result["issues"]
     total_words = len([word for word in re.findall(r"\b[\w'-]+\b", cleaned_text) if word.strip()])
     incorrect_words = len(corrections)
     corrections_applied = len([item for item in corrections if item.get("original") != item.get("corrected")])
@@ -133,10 +132,7 @@ def process_text(text: str, language: str = "en", context_before: str = "") -> D
     readability_score = calculate_readability(final_text)
     sentiment_result = analyze_sentiment(final_text)
     keywords = extract_keywords(final_text, normalized_language)
-    confidence_score = round(
-        min(99.0, (transformer_result.confidence_score * 0.45) + (spelling_result["confidence"] * 100 * 0.35) + (grammar_result["confidence"] * 100 * 0.20)),
-        2,
-    )
+    confidence_score = round(transformer_result.confidence_score, 2)
 
     explanations = [
         {
@@ -150,6 +146,35 @@ def process_text(text: str, language: str = "en", context_before: str = "") -> D
         }
         for item in corrections
     ]
+
+    diff_views = build_diff_views(cleaned_text, final_text)
+
+    return {
+        "original_text": cleaned_text,
+        "corrected_text": final_text,
+        "language": normalized_language,
+        "analysis_mode": "claude-ai" if transformer_result.used_transformer else "unavailable",
+        "transformer_model": transformer_result.model_name,
+        "transformer_used": transformer_result.used_transformer,
+        "context_before": context_before,
+        "corrections": corrections,
+        "explanations": explanations,
+        "keywords": keywords,
+        "stats": {
+            "total_words": total_words,
+            "incorrect_words_found": incorrect_words,
+            "corrections_applied": corrections_applied,
+            "accuracy_percentage": accuracy,
+            "readability_score": readability_score,
+            "confidence_score": confidence_score,
+        },
+        "readability_score": readability_score,
+        "sentiment_label": sentiment_result["label"],
+        "sentiment_polarity": sentiment_result["polarity"],
+        "confidence_score": confidence_score,
+        "diff_html": diff_views,
+        "message": transformer_result.explanation,
+    }
 
     diff_views = build_diff_views(cleaned_text, final_text)
 
