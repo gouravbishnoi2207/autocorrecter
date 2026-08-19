@@ -88,34 +88,160 @@ document.addEventListener('DOMContentLoaded', () => {
                 showMessage('Editor cleared.', 'info');
             }
 
-            function toggleVoiceInput() {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!SpeechRecognition) {
-                    showMessage('Speech recognition is not supported in this browser.', 'warning');
-                    return;
-                }
+function toggleVoiceInput() {
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
 
-                if (!recognition) {
-                    recognition = new SpeechRecognition();
-                    recognition.interimResults = true;
-                    recognition.continuous = false;
+    if (!SpeechRecognition) {
+        showMessage(
+            'Speech recognition is not supported in this browser. Please use Chrome or Edge.',
+            'warning'
+        );
+        return;
+    }
 
-                    recognition.onresult = (event) => {
-                        let transcript = '';
-                        for (let index = event.resultIndex; index < event.results.length; index += 1) {
-                            transcript += event.results[index][0].transcript;
-                        }
-                        inputText.value = `${inputText.value} ${transcript}`.trim();
-                        refreshPreview();
-                    };
+    // Stop listening if already active
+    if (recognition) {
+        recognition.stop();
+        recognition = null;
+        showMessage('Voice input stopped.', 'info');
+        return;
+    }
 
-                    recognition.onerror = () => showMessage('Voice input stopped unexpectedly. Try again.', 'warning');
-                }
+    recognition = new SpeechRecognition();
 
-                recognition.lang = languageSelect ? `${languageSelect.value || 'en'}-US` : 'en-US';
-                recognition.start();
-                showMessage('Listening for speech input...', 'info');
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    const voiceLanguages = {
+        en: 'en-US',
+        es: 'es-ES',
+        fr: 'fr-FR',
+        de: 'de-DE',
+        pt: 'pt-BR',
+        it: 'it-IT',
+        nl: 'nl-NL'
+    };
+
+    const selectedLanguage =
+        languageSelect ? languageSelect.value : 'en';
+
+    recognition.lang =
+        voiceLanguages[selectedLanguage] || 'en-US';
+
+    recognition.onstart = () => {
+        if (voiceBtn) {
+            voiceBtn.innerHTML =
+                '<i class="bi bi-stop-circle"></i> Stop Listening';
+
+            voiceBtn.classList.remove('btn-outline-info');
+            voiceBtn.classList.add('btn-danger');
+        }
+
+        showMessage(
+            'Listening... Speak now.',
+            'info'
+        );
+    };
+
+    recognition.onresult = (event) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+
+        for (
+            let index = event.resultIndex;
+            index < event.results.length;
+            index += 1
+        ) {
+            const transcript =
+                event.results[index][0].transcript;
+
+            if (event.results[index].isFinal) {
+                finalTranscript += transcript;
+            } else {
+                interimTranscript += transcript;
             }
+        }
+
+        // Put the final/interim speech into the editor
+        const spokenText =
+            `${finalTranscript} ${interimTranscript}`.trim();
+
+        if (spokenText) {
+            inputText.value =
+                `${inputText.value} ${spokenText}`.trim();
+        }
+    };
+
+    recognition.onerror = (event) => {
+        console.error(
+            'Speech recognition error:',
+            event.error
+        );
+
+        if (event.error === 'not-allowed') {
+            showMessage(
+                'Microphone permission was denied. Please allow microphone access.',
+                'warning'
+            );
+        } else if (event.error === 'no-speech') {
+            showMessage(
+                'No speech detected. Please try speaking again.',
+                'warning'
+            );
+        } else if (event.error === 'audio-capture') {
+            showMessage(
+                'No microphone was detected.',
+                'warning'
+            );
+        } else {
+            showMessage(
+                `Voice input error: ${event.error}`,
+                'warning'
+            );
+        }
+    };
+
+    recognition.onend = () => {
+        if (voiceBtn) {
+            voiceBtn.innerHTML =
+                '<i class="bi bi-mic-fill"></i> Voice Input';
+
+            voiceBtn.classList.remove('btn-danger');
+            voiceBtn.classList.add('btn-outline-info');
+        }
+
+        recognition = null;
+
+        // Analyze only after speech recognition finishes
+        if (inputText.value.trim()) {
+            refreshPreview();
+        }
+    };
+
+    try {
+        recognition.start();
+
+        showMessage(
+            'Listening for speech input...',
+            'info'
+        );
+    } catch (error) {
+        console.error(
+            'Could not start speech recognition:',
+            error
+        );
+
+        recognition = null;
+
+        showMessage(
+            'Unable to start voice input. Please try again.',
+            'danger'
+        );
+    }
+}
 
             async function submitText(endpoint) {
                 const payload = getPayload();
