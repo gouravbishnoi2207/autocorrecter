@@ -26,8 +26,13 @@ from utils.database import (
     save_correction,
     save_user,
 )
-from utils.grammar import analyze_sentiment, calculate_readability, extract_keywords
-from utils.spellchecker import normalize_language
+from utils.grammar import (
+    analyze_sentiment,
+    calculate_readability,
+    extract_keywords,
+    correct_grammar,
+)
+from utils.spellchecker import normalize_language, analyze_spelling
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -97,69 +102,244 @@ def admin_required(view_func):
     return wrapped_view
 
 
-def process_text(text: str, language: str = "en", context_before: str = "") -> Dict[str, Any]:
+def process_text(
+    text: str,
+    language: str = "en",
+    context_before: str = ""
+) -> Dict[str, Any]:
+
     cleaned_text = (text or "").strip()
     normalized_language = normalize_language(language)
 
+    if not cleaned_text:
+        return {
+            "original_text": "",
+            "corrected_text": "",
+            "language": normalized_language,
+            "analysis_mode": "none",
+            "transformer_model": "",
+            "transformer_used": False,
+            "context_before": context_before,
+            "corrections": [],
+            "explanations": [],
+            "keywords": [],
+            "stats": {
+                "total_words": 0,
+                "incorrect_words_found": 0,
+                "corrections_applied": 0,
+                "accuracy_percentage": 100.0,
+                "readability_score": 100.0,
+                "confidence_score": 0.0,
+            },
+            "readability_score": 100.0,
+            "sentiment_label": "Neutral",
+            "sentiment_polarity": 0.0,
+            "confidence_score": 0.0,
+            "diff_html": build_diff_views("", ""),
+            "message": "No text provided.",
+        }
+
+    # ---------------------------------------------------------
+    # 1. TRY AI CORRECTION
+    # ---------------------------------------------------------
     transformer_result = transformer_corrector.correct(
         cleaned_text,
         context_before=context_before,
         language=normalized_language,
     )
-    final_text = transformer_result.corrected_text
 
-    # Build correction entries straight from Claude's reported changes —
-    # no separate spellchecker/grammar pass, so valid technical terms
-    # (SaaS, admin, analytics, etc.) never get "corrected" a second time.
-    corrections = [
-        {
-            "type": "ai_correction",
-            "original": change.get("original"),
-            "corrected": change.get("corrected"),
-            "reason": change.get("reason", "Corrected by AI for spelling/grammar/clarity."),
-            "better_choice": change.get("reason", ""),
-            "suggestions": [change.get("corrected")],
-            "confidence": transformer_result.confidence_score / 100,
-        }
-        for change in transformer_result.changes
-    ]
+    corrections = []
+    final_text = cleaned_text
+    used_ai = transformer_result.used_transformer
 
-    total_words = len([word for word in re.findall(r"\b[\w'-]+\b", cleaned_text) if word.strip()])
+    if used_ai:
+        final_text = transformer_result.corrected_text or cleaned_text
+
+        for change in transformer_result.changes:
+            original = change.get("original", "")
+            corrected = change.get("corrected", "")
+
+            if not original or not corrected:
+                continue
+
+            corrections.append({
+                "type": "ai_correction",
+                "original": original,
+                "corrected": corrected,
+                "reason": change.get(
+                    "reason",
+                    "Corrected by AI for spelling or grammar."
+                ),
+                "better_choice": change.get(
+                    "reason",
+                    "This correction improves grammatical correctness."
+                ),
+                "suggestions": [corrected],
+                "confidence": transformer_result.confidence_score / 100,
+            })
+
+        analysis_mode = "claude-ai"
+
+        message = (
+            "Text corrected successfully using AI."
+        )
+
+    # ---------------------------------------------------------
+    # 2. LOCAL FALLBACK
+    # ---------------------------------------------------------
+    else:
+        spelling_result = analyze_spelling(
+            cleaned_text,
+            normalized_language
+        )
+
+        spelling_text = spelling_result["corrected_text"]
+
+        grammar_result = correct_grammar(
+            spelling_text,
+            normalized_language
+        )
+
+        final_text = grammar_result["corrected_text"]
+
+        # Add spelling corrections
+        for issue in spelling_result.get("issues", []):
+            corrections.append({
+                "type": "spelling",
+                "original": issue.get("original"),
+                "corrected": issue.get("corrected"),
+                "reason": issue.get(
+                    "reason",
+                    "Possible spelling mistake."
+                ),
+                "better_choice": issue.get(
+                    "better_choice",
+                    "The suggested word is a closer dictionary match."
+                ),
+                "suggestions": issue.get("suggestions", []),
+                "confidence": issue.get("confidence", 0.75),
+            })
+
+        # Add grammar corrections
+        for issue in grammar_result.get("issues", []):
+            corrections.append({
+                "type": "grammar",
+                "original": issue.get("original"),
+                "corrected": issue.get("corrected"),
+                "reason": issue.get(
+                    "reason",
+                    "Grammar or punctuation improvement."
+                ),
+                "better_choice": issue.get(
+                    "better_choice",
+                    "The corrected sentence follows standard English usage."
+                ),
+                "suggestions": issue.get("suggestions", []),
+                "confidence": issue.get("confidence", 0.78),
+            })
+
+        analysis_mode = "local-fallback"
+
+        fallback_confidence = max(
+            spelling_result.get("confidence", 1.0),
+            grammar_result.get("confidence", 1.0),
+        )
+
+        transformer_result.confidence_score = round(
+            fallback_confidence * 100,
+            2
+        )
+
+        message = (
+            "AI service unavailable. "
+            "Local spelling and grammar correction was used."
+        )
+
+    # ---------------------------------------------------------
+    # 3. STATISTICS
+    # ---------------------------------------------------------
+    total_words = len(
+        re.findall(r"\b[\w'-]+\b", cleaned_text)
+    )
+
     incorrect_words = len(corrections)
-    corrections_applied = len([item for item in corrections if item.get("original") != item.get("corrected")])
-    accuracy = 100.0 if total_words == 0 else round(max(0.0, ((total_words - incorrect_words) / total_words) * 100), 2)
+
+    corrections_applied = sum(
+        1
+        for item in corrections
+        if item.get("original") != item.get("corrected")
+    )
+
+    accuracy = (
+        100.0
+        if total_words == 0
+        else round(
+            max(
+                0.0,
+                ((total_words - incorrect_words) / total_words) * 100
+            ),
+            2,
+        )
+    )
 
     readability_score = calculate_readability(final_text)
-    sentiment_result = analyze_sentiment(final_text)
-    keywords = extract_keywords(final_text, normalized_language)
-    confidence_score = round(transformer_result.confidence_score, 2)
 
-    explanations = [
-        {
+    sentiment_result = analyze_sentiment(final_text)
+
+    keywords = extract_keywords(
+        final_text,
+        normalized_language
+    )
+
+    confidence_score = round(
+        transformer_result.confidence_score,
+        2
+    )
+
+    # ---------------------------------------------------------
+    # 4. EXPLANATIONS
+    # ---------------------------------------------------------
+    explanations = []
+
+    for item in corrections:
+        confidence = float(
+            item.get("confidence", 0)
+        )
+
+        if confidence <= 1:
+            confidence *= 100
+
+        explanations.append({
             "original": item.get("original"),
             "corrected": item.get("corrected"),
             "reason": item.get("reason"),
             "better_choice": item.get("better_choice"),
             "suggestions": item.get("suggestions", []),
-            "confidence": round(float(item.get("confidence", 0)) * 100 if item.get("confidence", 0) <= 1 else float(item.get("confidence", 0)), 2),
+            "confidence": round(confidence, 2),
             "type": item.get("type", "correction"),
-        }
-        for item in corrections
-    ]
-    
-    diff_views = build_diff_views(cleaned_text, final_text)
+        })
+
+    diff_views = build_diff_views(
+        cleaned_text,
+        final_text
+    )
 
     return {
         "original_text": cleaned_text,
         "corrected_text": final_text,
         "language": normalized_language,
-        "analysis_mode": "transformer+rules" if transformer_result.used_transformer else "rules-only",
+
+        "analysis_mode": analysis_mode,
         "transformer_model": transformer_result.model_name,
-        "transformer_used": transformer_result.used_transformer,
+        "transformer_used": used_ai,
+
         "context_before": context_before,
+
         "corrections": corrections,
         "explanations": explanations,
+
         "keywords": keywords,
+
         "stats": {
             "total_words": total_words,
             "incorrect_words_found": incorrect_words,
@@ -168,12 +348,17 @@ def process_text(text: str, language: str = "en", context_before: str = "") -> D
             "readability_score": readability_score,
             "confidence_score": confidence_score,
         },
+
         "readability_score": readability_score,
+
         "sentiment_label": sentiment_result["label"],
         "sentiment_polarity": sentiment_result["polarity"],
+
         "confidence_score": confidence_score,
+
         "diff_html": diff_views,
-        "message": transformer_result.explanation,
+
+        "message": message,
     }
 
 
