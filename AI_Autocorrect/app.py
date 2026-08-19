@@ -139,9 +139,7 @@ def process_text(
             "message": "No text provided.",
         }
 
-    # ---------------------------------------------------------
-    # 1. TRY AI CORRECTION
-    # ---------------------------------------------------------
+    # Try Claude first
     transformer_result = transformer_corrector.correct(
         cleaned_text,
         context_before=context_before,
@@ -152,10 +150,18 @@ def process_text(
     final_text = cleaned_text
     used_ai = transformer_result.used_transformer
 
+    # ---------------------------------------------------------
+    # CLAUDE SUCCESS
+    # ---------------------------------------------------------
     if used_ai:
-        final_text = transformer_result.corrected_text or cleaned_text
+
+        final_text = (
+            transformer_result.corrected_text
+            or cleaned_text
+        )
 
         for change in transformer_result.changes:
+
             original = change.get("original", "")
             corrected = change.get("corrected", "")
 
@@ -175,19 +181,20 @@ def process_text(
                     "This correction improves grammatical correctness."
                 ),
                 "suggestions": [corrected],
-                "confidence": transformer_result.confidence_score / 100,
+                "confidence": (
+                    transformer_result.confidence_score / 100
+                ),
             })
 
         analysis_mode = "claude-ai"
 
-        message = (
-            "Text corrected successfully using AI."
-        )
+        message = "Text corrected successfully using AI."
 
     # ---------------------------------------------------------
-    # 2. LOCAL FALLBACK
+    # LOCAL FALLBACK
     # ---------------------------------------------------------
     else:
+
         spelling_result = analyze_spelling(
             cleaned_text,
             normalized_language
@@ -202,8 +209,9 @@ def process_text(
 
         final_text = grammar_result["corrected_text"]
 
-        # Add spelling corrections
+        # Spelling corrections
         for issue in spelling_result.get("issues", []):
+
             corrections.append({
                 "type": "spelling",
                 "original": issue.get("original"),
@@ -216,12 +224,19 @@ def process_text(
                     "better_choice",
                     "The suggested word is a closer dictionary match."
                 ),
-                "suggestions": issue.get("suggestions", []),
-                "confidence": issue.get("confidence", 0.75),
+                "suggestions": issue.get(
+                    "suggestions",
+                    []
+                ),
+                "confidence": issue.get(
+                    "confidence",
+                    0.75
+                ),
             })
 
-        # Add grammar corrections
+        # Grammar corrections
         for issue in grammar_result.get("issues", []):
+
             corrections.append({
                 "type": "grammar",
                 "original": issue.get("original"),
@@ -234,8 +249,14 @@ def process_text(
                     "better_choice",
                     "The corrected sentence follows standard English usage."
                 ),
-                "suggestions": issue.get("suggestions", []),
-                "confidence": issue.get("confidence", 0.78),
+                "suggestions": issue.get(
+                    "suggestions",
+                    []
+                ),
+                "confidence": issue.get(
+                    "confidence",
+                    0.78
+                ),
             })
 
         analysis_mode = "local-fallback"
@@ -256,8 +277,9 @@ def process_text(
         )
 
     # ---------------------------------------------------------
-    # 3. STATISTICS
+    # STATISTICS
     # ---------------------------------------------------------
+
     total_words = len(
         re.findall(r"\b[\w'-]+\b", cleaned_text)
     )
@@ -282,9 +304,13 @@ def process_text(
         )
     )
 
-    readability_score = calculate_readability(final_text)
+    readability_score = calculate_readability(
+        final_text
+    )
 
-    sentiment_result = analyze_sentiment(final_text)
+    sentiment_result = analyze_sentiment(
+        final_text
+    )
 
     keywords = extract_keywords(
         final_text,
@@ -297,11 +323,13 @@ def process_text(
     )
 
     # ---------------------------------------------------------
-    # 4. EXPLANATIONS
+    # EXPLANATIONS
     # ---------------------------------------------------------
+
     explanations = []
 
     for item in corrections:
+
         confidence = float(
             item.get("confidence", 0)
         )
@@ -314,9 +342,18 @@ def process_text(
             "corrected": item.get("corrected"),
             "reason": item.get("reason"),
             "better_choice": item.get("better_choice"),
-            "suggestions": item.get("suggestions", []),
-            "confidence": round(confidence, 2),
-            "type": item.get("type", "correction"),
+            "suggestions": item.get(
+                "suggestions",
+                []
+            ),
+            "confidence": round(
+                confidence,
+                2
+            ),
+            "type": item.get(
+                "type",
+                "correction"
+            ),
         })
 
     diff_views = build_diff_views(
