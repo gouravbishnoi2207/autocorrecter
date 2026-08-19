@@ -65,8 +65,15 @@ class ClaudeCorrector:
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": user_message}],
             )
+
             raw = response.content[0].text.strip()
-            raw = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            raw = (
+                raw.removeprefix("```json")
+                .removeprefix("```")
+                .removesuffix("```")
+                .strip()
+            )
+
             parsed = json.loads(raw)
 
             corrected_text = parsed.get("corrected_text", text)
@@ -82,8 +89,12 @@ class ClaudeCorrector:
                 context_summary=context_before,
                 changes=changes,
             )
-          except Exception as exc:
-            print(f"CLAUDE API ERROR: {type(exc).__name__}: {exc}", flush=True)
+
+        except Exception as exc:
+            print(
+                f"CLAUDE API ERROR: {type(exc).__name__}: {exc}",
+                flush=True,
+            )
 
             return TransformerCorrectionResult(
                 text,
