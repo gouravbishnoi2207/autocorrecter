@@ -97,7 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 setEmptyState();
                 showMessage('Editor cleared.', 'info');
             }
-let recognition = null;
 let isListening = false;
 let voiceBaseText = "";
 
@@ -227,23 +226,28 @@ function toggleVoiceInput() {
 
     recognition.onend = () => {
 
-        isListening = false;
+    isListening = false;
 
-        voiceBtn.innerHTML =
-            '<i class="bi bi-mic-fill"></i> Voice Input';
+    voiceBtn.innerHTML =
+        '<i class="bi bi-mic-fill"></i> Voice Input';
 
-        voiceBtn.classList.remove(
-            "btn-danger"
+    voiceBtn.classList.remove(
+        "btn-danger"
+    );
+
+    voiceBtn.classList.add(
+        "btn-outline-info"
+    );
+
+    recognition = null;
+
+    if (inputText.value.trim()) {
+        showMessage(
+            "Voice input added. Click Correct Text to analyze.",
+            "info"
         );
-
-        voiceBtn.classList.add(
-            "btn-outline-info"
-        );
-
-        if (inputText.value.trim()) {
-            refreshPreview();
-        }
-    };
+    }
+};
 
     try {
         recognition.start();
