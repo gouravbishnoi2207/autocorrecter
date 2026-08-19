@@ -147,36 +147,7 @@ def process_text(text: str, language: str = "en", context_before: str = "") -> D
         for item in corrections
     ]
 
-    diff_views = build_diff_views(cleaned_text, final_text)
-
-    return {
-        "original_text": cleaned_text,
-        "corrected_text": final_text,
-        "language": normalized_language,
-        "analysis_mode": "claude-ai" if transformer_result.used_transformer else "unavailable",
-        "transformer_model": transformer_result.model_name,
-        "transformer_used": transformer_result.used_transformer,
-        "context_before": context_before,
-        "corrections": corrections,
-        "explanations": explanations,
-        "keywords": keywords,
-        "stats": {
-            "total_words": total_words,
-            "incorrect_words_found": incorrect_words,
-            "corrections_applied": corrections_applied,
-            "accuracy_percentage": accuracy,
-            "readability_score": readability_score,
-            "confidence_score": confidence_score,
-        },
-        "readability_score": readability_score,
-        "sentiment_label": sentiment_result["label"],
-        "sentiment_polarity": sentiment_result["polarity"],
-        "confidence_score": confidence_score,
-        "diff_html": diff_views,
-        "message": transformer_result.explanation,
-    }
-
-    diff_views = build_diff_views(cleaned_text, final_text)
+        diff_views = build_diff_views(cleaned_text, final_text)
 
     return {
         "original_text": cleaned_text,
