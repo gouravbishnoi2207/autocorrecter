@@ -82,18 +82,18 @@ class ClaudeCorrector:
                 context_summary=context_before,
                 changes=changes,
             )
-        except Exception as exc:
-    print(f"CLAUDE API ERROR: {type(exc).__name__}: {exc}", flush=True)
+          except Exception as exc:
+            print(f"CLAUDE API ERROR: {type(exc).__name__}: {exc}", flush=True)
 
-    return TransformerCorrectionResult(
-        text,
-        50.0,
-        self.model_name,
-        False,
-        f"Claude correction failed: {exc}",
-        "",
-        [],
-    )
+            return TransformerCorrectionResult(
+                text,
+                50.0,
+                self.model_name,
+                False,
+                f"Claude correction failed: {exc}",
+                "",
+                [],
+            )
 
 
 @lru_cache(maxsize=1)
