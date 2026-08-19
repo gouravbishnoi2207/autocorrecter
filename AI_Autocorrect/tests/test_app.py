@@ -15,13 +15,12 @@ def test_preview_api_returns_structured_result(app_module, client, monkeypatch):
             corrected_text="Hello world.",
             confidence_score=90.0,
             model_name="stub-model",
-            used_transformer=False,
+            used_transformer=True,
             explanation="Stubbed transformer.",
             context_summary="",
+            changes=[],
         ),
     )
-    monkeypatch.setattr(app_module, "analyze_spelling", lambda text, language: {"corrected_text": text, "issues": [], "confidence": 1.0})
-    monkeypatch.setattr(app_module, "correct_grammar", lambda text, language: {"corrected_text": text, "issues": [], "confidence": 1.0})
     monkeypatch.setattr(app_module, "calculate_readability", lambda text: 88.0)
     monkeypatch.setattr(app_module, "analyze_sentiment", lambda text: {"label": "Neutral", "polarity": 0.0})
     monkeypatch.setattr(app_module, "extract_keywords", lambda text, language: ["hello", "world"])
@@ -33,7 +32,7 @@ def test_preview_api_returns_structured_result(app_module, client, monkeypatch):
     assert payload["success"] is True
     assert payload["stored"] is False
     assert payload["corrected_text"] == "Hello world."
-    assert payload["stats"]["confidence_score"] == 95.5
+    assert payload["stats"]["confidence_score"] == 90.0
 
 
 def test_register_and_history_access(client):
