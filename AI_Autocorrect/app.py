@@ -146,8 +146,8 @@ def process_text(text: str, language: str = "en", context_before: str = "") -> D
         }
         for item in corrections
     ]
-
-        diff_views = build_diff_views(cleaned_text, final_text)
+    
+    diff_views = build_diff_views(cleaned_text, final_text)
 
     return {
         "original_text": cleaned_text,
@@ -157,8 +157,6 @@ def process_text(text: str, language: str = "en", context_before: str = "") -> D
         "transformer_model": transformer_result.model_name,
         "transformer_used": transformer_result.used_transformer,
         "context_before": context_before,
-        "spelling_issues": spelling_result["issues"],
-        "grammar_issues": grammar_result["issues"],
         "corrections": corrections,
         "explanations": explanations,
         "keywords": keywords,
